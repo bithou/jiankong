@@ -1,7 +1,7 @@
 window.Config = {
 
   // 显示标题
-  SiteName: '在线网站状态-监控面板',
+  SiteName: '站点监控',
 
   // UptimeRobot Api Keys
   // 支持 Monitor-Specific 和 Read-Only
