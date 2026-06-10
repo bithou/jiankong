@@ -2,32 +2,46 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // 拦截发往 UptimeRobot API 的请求
-    if (url.pathname.startsWith('/v2/') || url.hostname === 'api.uptimerobot.com') {
+    if (url.pathname.startsWith('/v2/')) {
       const body = await request.text();
 
-      const response = await fetch('https://api.uptimerobot.com' + url.pathname, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: body,
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
-      const data = await response.text();
+      try {
+        const response = await fetch('https://api.uptimerobot.com' + url.pathname, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: body,
+          signal: controller.signal,
+        });
 
-      return new Response(data, {
-        status: response.status,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
+        clearTimeout(timeout);
+        const data = await response.text();
+
+        return new Response(data, {
+          status: response.status,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
     }
 
-    // OPTIONS 预检请求
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
@@ -38,7 +52,6 @@ export default {
       });
     }
 
-    // 其他请求走 Pages 静态文件
     return env.ASSETS.fetch(request);
   },
 };
