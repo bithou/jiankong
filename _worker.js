@@ -2,13 +2,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // 只代理 /api/uptimerobot 路径
-    if (url.pathname === '/api/uptimerobot') {
-      // 读取原始请求体
+    // 拦截发往 UptimeRobot API 的请求
+    if (url.pathname.startsWith('/v2/') || url.hostname === 'api.uptimerobot.com') {
       const body = await request.text();
 
-      // 转发请求到 UptimeRobot API
-      const response = await fetch('https://api.uptimerobot.com/v2/getMonitors', {
+      const response = await fetch('https://api.uptimerobot.com' + url.pathname, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -18,7 +16,6 @@ export default {
 
       const data = await response.text();
 
-      // 返回结果，添加 CORS 头
       return new Response(data, {
         status: response.status,
         headers: {
@@ -41,7 +38,7 @@ export default {
       });
     }
 
-    // 其他请求正常走 Pages 静态文件
+    // 其他请求走 Pages 静态文件
     return env.ASSETS.fetch(request);
   },
 };
